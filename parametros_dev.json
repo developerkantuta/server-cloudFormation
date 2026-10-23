@@ -1,0 +1,18 @@
+[
+  {
+    "ParameterKey": "Proyecto",
+    "ParameterValue": "codigo-cero"
+  },
+  {
+    "ParameterKey": "Ambiente",
+    "ParameterValue": "dev"
+  },
+  {
+    "ParameterKey": "TipoInstancia",
+    "ParameterValue": "t3.micro"
+  },
+  {
+    "ParameterKey": "MiIPPublica",
+    "ParameterValue": "189.28.71.162/32"
+  }
+]

@@ -1,0 +1,143 @@
+# ==============================================================================
+# PROYECTO: codigo-cero
+# DESCRIPCIÓN: Backend en EC2 + Frontend en S3 (Arquitectura Serverless/Estática)
+# ==============================================================================
+
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Infraestructura para Backend (EC2) y Frontend (S3) - Proyecto codigo-cero"
+
+Parameters:
+  Proyecto:
+    Type: String
+    Default: codigo-cero
+  Ambiente:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, qa, prod]
+  TipoInstancia:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+  ImagenLinux:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+  # NUEVO PARÁMETRO: Tu IP pública para restringir el acceso SSH (seguridad)
+  MiIPPublica:
+    Type: String
+    Default: "189.28.71.162/32"
+    Description: "Tu dirección IP actual para permitir SSH (ej. 190.12.34.56/32)"
+  # NUEVO PARÁMETRO:
+  KeyName:
+    Type: String
+    Default: lab3-key
+    Description: "Nombre del Key Pair para SSH"
+
+Resources:
+  # --------------------------------------------------------
+  # 1. SECURITY GROUP (Cortafuegos para el Backend)
+  # --------------------------------------------------------
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Permite SSH y trafico HTTP a Node.js"
+      SecurityGroupIngress:
+        # Regla 1: SSH (Puerto 22) - Solo desde tu IP (Usando el parámetro MiIPPublica)
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MiIPPublica
+        # Regla 2: Node.js (Puerto 3000) - Abierto a todo el mundo para que el frontend lo consuma
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: !Sub "sg-backend-${Proyecto}-${Ambiente}"
+
+  # --------------------------------------------------------
+  # 2. SERVIDOR BACKEND (EC2)
+  # --------------------------------------------------------
+  ServidorBackend:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref ImagenLinux
+      InstanceType: !Ref TipoInstancia
+      KeyName: !Ref KeyName  
+      # ASOCIAMOS EL CORTAFUEGOS AQUÍ:
+      SecurityGroups:
+        - !Ref BackendSecurityGroup
+      # AQUÍ AGREGAMOS EL SCRIPT DE INSTALACIÓN AUTOMÁTICA
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          # 1. Actualizar el sistema e instalar Git
+          dnf update -y
+          dnf install -y git
+          
+          # 2. Instalar Node.js 20
+          curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          dnf install -y nodejs
+          
+          # 3. Clonar el repositorio (asegúrate de que esta URL sea la correcta)
+          git clone https://github.com/developerkantuta/backend-asistencia-update.git /home/ec2-user/backend
+          
+          # 4. Instalar dependencias y arrancar el servidor
+          cd /home/ec2-user/backend
+          npm install
+          cp .env.example .env
+          
+          # Levantar el backend en segundo plano para que no se muera si cierras la terminal
+          npm start > /home/ec2-user/backend.log 2>&1 &
+      Tags:
+        - Key: Name
+          Value: !Sub "vm-backend-${Proyecto}-${Ambiente}"
+        - Key: Rol
+          Value: "Backend"
+
+  # --------------------------------------------------------
+  # 3. BUCKET S3 (Frontend Estático)
+  # --------------------------------------------------------
+  FrontendBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      # El nombre debe ser único globalmente
+      BucketName: !Sub "frontend-${Proyecto}-${Ambiente}-${AWS::AccountId}"
+      # CONFIGURACIÓN CLAVE: Habilitar el modo "Sitio Web Estático"
+      WebsiteConfiguration:
+        IndexDocument: index.html
+        ErrorDocument: index.html
+      # Política para permitir lectura pública (necesario para que el navegador cargue el HTML)
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: false
+        BlockPublicPolicy: false
+        IgnorePublicAcls: false
+        RestrictPublicBuckets: false
+      Tags:
+        - Key: Name
+          Value: !Sub "s3-frontend-${Proyecto}-${Ambiente}"
+
+  # Política del Bucket para que sea público
+  FrontendBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref FrontendBucket
+      PolicyDocument:
+        Statement:
+          - Sid: PublicReadGetObject
+            Effect: Allow
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws:s3:::${FrontendBucket}/*"
+
+# ==============================================================================
+# 4. SALIDAS (Outputs)
+# ==============================================================================
+Outputs:
+  BackendPublicIP:
+    Description: "IP Pública del servidor Backend (Para conectar por SSH)"
+    Value: !GetAtt ServidorBackend.PublicIp
+  
+  FrontendURL:
+    Description: "URL del sitio web estático en S3"
+    Value: !GetAtt FrontendBucket.WebsiteURL
