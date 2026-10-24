@@ -1,0 +1,7 @@
+template-file-path: template.yaml
+parameters:
+  Proyecto: codigo-cero
+  Ambiente: dev
+  TipoInstancia: t3.micro
+  MiIPPublica: 189.28.71.162/32
+  KeyName: lab3-key
