@@ -1,6 +1,6 @@
 # ==============================================================================
 # PROYECTO: codigo-cero
-# DESCRIPCIÓN: Backend en EC2 + Frontend en S3 (Arquitectura Serverless/Estática)
+# DESCRIPCIÓN: Backend en EC2 + Frontend en S3 (Arquitectura Serverless/Estática) Mejorada
 # ==============================================================================
 
 AWSTemplateFormatVersion: "2010-09-09"
@@ -26,7 +26,7 @@ Parameters:
     Type: String
     Default: "189.28.71.162/32"
     Description: "Tu dirección IP actual para permitir SSH (ej. 190.12.34.56/32)"
-  # NUEVO PARÁMETRO:
+  
   KeyName:
     Type: String
     Default: lab3-key
@@ -46,11 +46,13 @@ Resources:
           FromPort: 22
           ToPort: 22
           CidrIp: !Ref MiIPPublica
+          Description: "Acceso SSH restringido a la IP del administrador"
         # Regla 2: Node.js (Puerto 3000) - Abierto a todo el mundo para que el frontend lo consuma
         - IpProtocol: tcp
           FromPort: 3000
           ToPort: 3000
           CidrIp: 0.0.0.0/0
+          Description: "Acceso publico al API del Backend"
       Tags:
         - Key: Name
           Value: !Sub "sg-backend-${Proyecto}-${Ambiente}"
@@ -67,6 +69,15 @@ Resources:
       # ASOCIAMOS EL CORTAFUEGOS AQUÍ:
       SecurityGroups:
         - !Ref BackendSecurityGroup
+      # AGREGAR ESTO PARA CIFRAR EL DISCO:
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 8
+            Encrypted: true
+            # AGREGAR ESTO PARA IMDSv2:
+      MetadataOptions:
+        HttpTokens: required
       # AQUÍ AGREGAMOS EL SCRIPT DE INSTALACIÓN AUTOMÁTICA
       UserData:
         Fn::Base64: |
