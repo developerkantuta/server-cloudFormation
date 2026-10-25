@@ -12,12 +12,16 @@ Parameters:
     Type: String
   SecurityGroupId:  # <-- Recibe el ID desde el main.yaml
     Type: String
+    # AGREGA ESTO:
+  ImagenLinux:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
 
 Resources:
   ServidorBackend:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 # Usando SSM directamente
+      ImageId: !Ref ImagenLinux
       InstanceType: !Ref TipoInstancia
       KeyName: !Ref KeyName
       SecurityGroupIds:
