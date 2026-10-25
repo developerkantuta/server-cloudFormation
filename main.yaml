@@ -24,7 +24,7 @@ Resources:
   StackSeguridad:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/seguridad.yaml
+      TemplateURL: https://cfn-templates-codigo-cero-950796416490.s3.us-east-1.amazonaws.com/seguridad.yaml
       Parameters:
         Proyecto: !Ref Proyecto
         Ambiente: !Ref Ambiente
@@ -34,7 +34,7 @@ Resources:
   StackServidor:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/servidor.yaml
+      TemplateURL: https://cfn-templates-codigo-cero-950796416490.s3.us-east-1.amazonaws.com/servidor.yaml
       Parameters:
         Proyecto: !Ref Proyecto
         Ambiente: !Ref Ambiente
@@ -47,7 +47,7 @@ Resources:
   StackS3:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/s3.yaml
+      TemplateURL: https://cfn-templates-codigo-cero-950796416490.s3.us-east-1.amazonaws.com/s3.yaml
       Parameters:
         Proyecto: !Ref Proyecto
         Ambiente: !Ref Ambiente
