@@ -1,0 +1,62 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Plantilla Principal - Proyecto codigo-cero (Anidada)"
+
+Parameters:
+  Proyecto:
+    Type: String
+    Default: codigo-cero
+  Ambiente:
+    Type: String
+    Default: dev
+  TipoInstancia:
+    Type: String
+    Default: t3.micro
+    AllowedValues: [t3.micro, t3.small]
+  MiIPPublica:
+    Type: String
+    Default: "189.28.71.162/32"
+  KeyName:
+    Type: String
+    Default: lab3-key
+
+Resources:
+  # 1. Llamamos a la plantilla de Seguridad
+  StackSeguridad:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/seguridad.yaml
+      Parameters:
+        Proyecto: !Ref Proyecto
+        Ambiente: !Ref Ambiente
+        MiIPPublica: !Ref MiIPPublica
+
+  # 2. Llamamos a la plantilla del Servidor (EC2)
+  StackServidor:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/servidor.yaml
+      Parameters:
+        Proyecto: !Ref Proyecto
+        Ambiente: !Ref Ambiente
+        TipoInstancia: !Ref TipoInstancia
+        KeyName: !Ref KeyName
+        # AQUÍ ESTÁ LA MAGIA: Le pasamos el ID del Security Group que creó el StackSeguridad
+        SecurityGroupId: !GetAtt StackSeguridad.Outputs.SecurityGroupId
+
+  # 3. Llamamos a la plantilla del S3
+  StackS3:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://raw.githubusercontent.com/developerkantuta/server-CloudFormation/main/s3.yaml
+      Parameters:
+        Proyecto: !Ref Proyecto
+        Ambiente: !Ref Ambiente
+
+Outputs:
+  BackendPublicIP:
+    Description: "IP Pública del servidor Backend"
+    Value: !GetAtt StackServidor.Outputs.BackendIP
+  
+  FrontendURL:
+    Description: "URL del sitio web estático en S3"
+    Value: !GetAtt StackS3.Outputs.SiteURL

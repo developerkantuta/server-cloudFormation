@@ -1,0 +1,46 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Plantilla del Servidor EC2"
+
+Parameters:
+  Proyecto:
+    Type: String
+  Ambiente:
+    Type: String
+  TipoInstancia:
+    Type: String
+  KeyName:
+    Type: String
+  SecurityGroupId:  # <-- Recibe el ID desde el main.yaml
+    Type: String
+
+Resources:
+  ServidorBackend:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 # Usando SSM directamente
+      InstanceType: !Ref TipoInstancia
+      KeyName: !Ref KeyName
+      SecurityGroupIds:
+        - !Ref SecurityGroupId
+      MetadataOptions:
+        HttpTokens: required
+      UserData:
+        Fn::Base64: |
+          #!/bin/bash
+          dnf update -y
+          dnf install -y git
+          curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+          dnf install -y nodejs
+          git clone https://github.com/developerkantuta/backend-asistencia-update.git /home/ec2-user/backend
+          cd /home/ec2-user/backend
+          npm install
+          cp .env.example .env
+          npm start > /home/ec2-user/backend.log 2>&1 &
+      Tags:
+        - Key: Name
+          Value: !Sub "vm-backend-${Proyecto}-${Ambiente}"
+
+Outputs:
+  BackendIP:
+    Description: "IP publica del servidor"
+    Value: !GetAtt ServidorBackend.PublicIp

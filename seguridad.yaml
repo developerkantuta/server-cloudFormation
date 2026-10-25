@@ -1,0 +1,36 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "Plantilla de Seguridad - Security Groups"
+
+Parameters:
+  Proyecto:
+    Type: String
+  Ambiente:
+    Type: String
+  MiIPPublica:
+    Type: String
+
+Resources:
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: "Permite SSH y trafico HTTP a Node.js"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: !Ref MiIPPublica
+          Description: "Acceso SSH restringido"
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+          Description: "Acceso publico al API"
+      Tags:
+        - Key: Name
+          Value: !Sub "sg-backend-${Proyecto}-${Ambiente}"
+
+# ESTO ES CLAVE: Exportamos el ID del Security Group para que el main.yaml lo use
+Outputs:
+  SecurityGroupId:
+    Description: "ID del Security Group del Backend"
+    Value: !Ref BackendSecurityGroup

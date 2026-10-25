@@ -1,4 +1,5 @@
-template-file-path: template.yaml
+#template-file-path: template.yaml
+template-file-path: main.yaml
 parameters:
   Proyecto: codigo-cero
   Ambiente: dev
